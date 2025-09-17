@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer, ScatterChart, Scatter } from 'recharts';
 
 interface ChartData {
   name: string;
@@ -102,6 +102,41 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ data, title, c
           activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
         />
       </LineChart>
+    </ResponsiveContainer>
+  </div>
+);
+
+interface HeatmapProps {
+  data: Array<{ x: number; y: number; value: number; zone: string }>;
+  title?: string;
+  className?: string;
+}
+
+export const SimpleHeatmap: React.FC<HeatmapProps> = ({ data, title, className = "" }) => (
+  <div className={`p-4 ${className}`}>
+    {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
+    <ResponsiveContainer width="100%" height={300}>
+      <ScatterChart>
+        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+        <XAxis type="number" dataKey="x" name="Location X" />
+        <YAxis type="number" dataKey="y" name="Location Y" />
+        <Tooltip 
+          cursor={{ strokeDasharray: '3 3' }}
+          contentStyle={{ 
+            backgroundColor: 'hsl(var(--card))', 
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '8px'
+          }}
+          formatter={(value: any, name: string, props: any) => [
+            `${props.payload.value} tourists`,
+            props.payload.zone
+          ]}
+        />
+        <Scatter 
+          data={data}
+          fill="hsl(var(--primary))"
+        />
+      </ScatterChart>
     </ResponsiveContainer>
   </div>
 );

@@ -4,7 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Users, Shield, Phone, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MapPin, Users, Shield, Phone, AlertTriangle, X } from 'lucide-react';
 import { mockZonesData, Tourist, Zone, getTouristStatusColor } from '@/data/mockData';
 
 // Mock Map Component (since we don't have Mapbox token)
@@ -34,8 +36,26 @@ const MockMapView: React.FC = () => {
     setSosAlerts(prev => prev.filter(t => t.id !== touristId));
   };
 
+  // Calculate tourist density for coloring
+  const calculateDensity = (zoneIndex: number) => {
+    const zone = mockZonesData.zones[zoneIndex];
+    const touristCount = zone.tourists.length;
+    if (touristCount >= 3) return 'high'; // Red
+    if (touristCount >= 2) return 'medium'; // Yellow  
+    return 'low'; // Green
+  };
+
+  const getDensityColor = (density: string) => {
+    switch (density) {
+      case 'high': return 'risky';
+      case 'medium': return 'moderate'; 
+      default: return 'safe';
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <TooltipProvider>
+      <div className="space-y-4">
       {/* SOS Alerts Banner */}
       {sosAlerts.length > 0 && (
         <Alert className="border-sos bg-sos/10 animate-pulse">
@@ -110,44 +130,74 @@ const MockMapView: React.FC = () => {
                 
                 {/* Zone Markers */}
                 <div className="relative z-10 w-full h-full p-8">
-                  {mockZonesData.zones.map((zone, index) => (
-                    <div
-                      key={zone.zoneId}
-                      className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2`}
-                      style={{
-                        left: `${20 + (index * 15)}%`,
-                        top: `${30 + (index * 12)}%`,
-                      }}
-                      onClick={() => handleZoneClick(zone)}
-                    >
-                      {/* Zone Circle */}
-                      <div className={`w-16 h-16 rounded-full bg-status-${zone.status.toLowerCase()} opacity-30 animate-pulse`}></div>
-                      
-                      {/* Zone Label */}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white px-2 py-1 rounded shadow-sm text-xs font-medium whitespace-nowrap">
-                        {zone.name}
-                      </div>
+                  {mockZonesData.zones.map((zone, index) => {
+                    const density = calculateDensity(index);
+                    return (
+                      <div
+                        key={zone.zoneId}
+                        className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2`}
+                        style={{
+                          left: `${20 + (index * 15)}%`,
+                          top: `${30 + (index * 12)}%`,
+                        }}
+                      >
+                        {/* Zone Circle with Tooltip */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className={`w-16 h-16 rounded-full bg-status-${zone.status.toLowerCase()} opacity-30 animate-pulse cursor-pointer`}
+                              onClick={() => handleZoneClick(zone)}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-sm">
+                              <p className="font-medium">{zone.name}</p>
+                              <p>Status: {zone.status}</p>
+                              <p>Tourists: {zone.tourists.length}</p>
+                              <p>Density: {density}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        {/* Zone Label */}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white px-2 py-1 rounded shadow-sm text-xs font-medium whitespace-nowrap">
+                          {zone.name}
+                        </div>
 
-                      {/* Tourist Dots */}
-                      {zone.tourists.map((tourist, tIndex) => (
-                        <div
-                          key={tourist.id}
-                          className={`absolute w-3 h-3 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 ${
-                            tourist.sosActive ? 'animate-pulse-sos' : ''
-                          } bg-status-${getTouristStatusColor(tourist)}`}
-                          style={{
-                            left: `${-20 + (tIndex * 15)}px`,
-                            top: `${-10 + (tIndex * 10)}px`,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTouristClick(tourist);
-                          }}
-                          title={tourist.name}
-                        />
-                      ))}
-                    </div>
-                  ))}
+                        {/* Tourist Dots - All visible with density-based coloring */}
+                        {zone.tourists.map((tourist, tIndex) => (
+                          <Tooltip key={tourist.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`absolute w-3 h-3 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 ${
+                                  tourist.sosActive 
+                                    ? 'animate-pulse-sos bg-status-sos' 
+                                    : `bg-status-${getDensityColor(density)}`
+                                }`}
+                                style={{
+                                  left: `${-20 + (tIndex * 15)}px`,
+                                  top: `${-10 + (tIndex * 10)}px`,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTouristClick(tourist);
+                                }}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-sm">
+                                <p className="font-medium">{tourist.name}</p>
+                                <p>Risk: {tourist.riskLevel}</p>
+                                <p>ID: {tourist.idIssued ? 'Issued' : 'Pending'}</p>
+                                {tourist.sosActive && <p className="text-sos font-bold">SOS ACTIVE!</p>}
+                                <p>Safety: {tourist.safetyScore}/100</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Map Instructions */}
@@ -236,92 +286,88 @@ const MockMapView: React.FC = () => {
         </Card>
       )}
 
-      {/* Tourist Details Modal */}
-      {selectedTourist && (
-        <Card className="animate-fade-in border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Tourist Details: {selectedTourist.name}</span>
-              <div className="flex items-center space-x-2">
-                <Badge className={`bg-status-${getTouristStatusColor(selectedTourist)}`}>
-                  {selectedTourist.riskLevel}
-                </Badge>
-                {selectedTourist.sosActive && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    SOS ACTIVE
-                  </Badge>
-                )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium">Blockchain ID</label>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTourist.blockchainId || 'Not Issued'}
-                  </p>
+      {/* Tourist Details Lightbox Modal */}
+      <Dialog open={!!selectedTourist} onOpenChange={() => setSelectedTourist(null)}>
+        <DialogContent className="max-w-2xl">
+          {selectedTourist && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>Tourist Details: {selectedTourist.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={`bg-status-${getTouristStatusColor(selectedTourist)}`}>
+                      {selectedTourist.riskLevel}
+                    </Badge>
+                    {selectedTourist.sosActive && (
+                      <Badge variant="destructive" className="animate-pulse">
+                        SOS ACTIVE
+                      </Badge>
+                    )}
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Blockchain ID</label>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTourist.blockchainId || 'Not Issued'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Nationality</label>
+                    <p className="text-sm text-muted-foreground">{selectedTourist.nationality}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Safety Score</label>
+                    <p className="text-sm text-muted-foreground">{selectedTourist.safetyScore}/100</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Nationality</label>
-                  <p className="text-sm text-muted-foreground">{selectedTourist.nationality}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Safety Score</label>
-                  <p className="text-sm text-muted-foreground">{selectedTourist.safetyScore}/100</p>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Emergency Contact</label>
+                    <p className="text-sm text-muted-foreground flex items-center">
+                      <Phone className="h-3 w-3 mr-1" />
+                      {selectedTourist.emergencyContact}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Itinerary</label>
+                    <p className="text-sm text-muted-foreground">{selectedTourist.itinerary}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Last Active</label>
+                    <p className="text-sm text-muted-foreground">{selectedTourist.lastActiveTime}</p>
+                  </div>
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium">Emergency Contact</label>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <Phone className="h-3 w-3 mr-1" />
-                    {selectedTourist.emergencyContact}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Itinerary</label>
-                  <p className="text-sm text-muted-foreground">{selectedTourist.itinerary}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Last Active</label>
-                  <p className="text-sm text-muted-foreground">{selectedTourist.lastActiveTime}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 flex space-x-2">
-              {selectedTourist.sosActive && (
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => dismissAlert(selectedTourist.id)}
-                >
-                  Acknowledge SOS
-                </Button>
-              )}
-              {!selectedTourist.idIssued && (
+              <div className="mt-4 flex space-x-2">
+                {selectedTourist.sosActive && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => dismissAlert(selectedTourist.id)}
+                  >
+                    Acknowledge SOS
+                  </Button>
+                )}
+                {!selectedTourist.idIssued && (
+                  <Button variant="outline" size="sm">
+                    Issue Blockchain ID
+                  </Button>
+                )}
                 <Button variant="outline" size="sm">
-                  Issue Blockchain ID
+                  Contact Tourist
                 </Button>
-              )}
-              <Button variant="outline" size="sm">
-                Contact Tourist
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setSelectedTourist(null)}
-              >
-                Close
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      </div>
+    </TooltipProvider>
   );
 };
 

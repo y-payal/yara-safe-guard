@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { SimpleBarChart, SimplePieChart, SimpleLineChart } from '@/components/charts/SimpleChart';
+import { SimpleBarChart, SimplePieChart, SimpleLineChart, SimpleHeatmap } from '@/components/charts/SimpleChart';
 import { getStatisticsData } from '@/data/mockData';
 import { Users, Shield, AlertTriangle, TrendingUp } from 'lucide-react';
 
@@ -100,15 +100,35 @@ const ReportsPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Tourist Activity Timeline */}
-      <Card className="card-shadow">
-        <CardHeader>
-          <CardTitle>Tourist Activity (24 Hours)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SimpleLineChart data={stats.touristActivity} />
-        </CardContent>
-      </Card>
+      {/* Charts Grid - Lower Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tourist Activity Timeline */}
+        <Card className="card-shadow">
+          <CardHeader>
+            <CardTitle>Tourist Activity (24 Hours)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimpleLineChart data={stats.touristActivity} />
+          </CardContent>
+        </Card>
+
+        {/* Tourist Density Heatmap */}
+        <Card className="card-shadow">
+          <CardHeader>
+            <CardTitle>Tourist Density Heatmap</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimpleHeatmap 
+              data={stats.touristsByZone.map((zone, index) => ({
+                x: 20 + (index * 15),
+                y: 30 + (index * 12), 
+                value: zone.tourists,
+                zone: zone.name
+              }))}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Detailed Statistics Table */}
       <Card className="card-shadow">
