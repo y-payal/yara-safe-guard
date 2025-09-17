@@ -15,6 +15,12 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Government-specific variants for YaRa Dashboard
+        government: "government-gradient text-primary-foreground hover:opacity-90 shadow-md",
+        safe: "bg-safe text-safe-foreground hover:bg-safe/90",
+        risky: "bg-risky text-risky-foreground hover:bg-risky/90", 
+        moderate: "bg-moderate text-moderate-foreground hover:bg-moderate/90",
+        sos: "bg-sos text-sos-foreground hover:bg-sos/90 animate-pulse",
       },
       size: {
         default: "h-10 px-4 py-2",
